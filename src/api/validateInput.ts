@@ -38,7 +38,8 @@ export function validateScope(scopeType: string, scopeName: string, token: strin
     const orgRegex = /^(?!-)[A-Za-z0-9-]{1,39}(?<!-)$/;
     const enterpriseRegex = /^(?!-)[A-Za-z0-9-]{1,60}(?<!-)$/;
     const teamRegex = /^(?!-)[A-Za-z0-9-]{1,39}(?<!-)$/;
-    const tokenRegex = /^ghp_[A-Za-z0-9]{36}$/;
+    // Token regex updated to allow for any length of token, not just 36 characters, and to allow for any characters in the token, and starts with 'ghp_' or 'github_pat_'
+    const tokenRegex = /^(ghp|github_pat)_.*$/;
 
     if (!scopeTypeRegex.test(scopeType)) {
         return { isValid: false, normalizedScopeType: '', normalizedTeamSlug: '', errorMessage: 'Invalid scopeType' };
