@@ -41,7 +41,7 @@ export class MySQLTenantStorage implements ITenantStorage {
                 scopeName VARCHAR(255) NOT NULL,
                 scopeType VARCHAR(50) NOT NULL,
                 team VARCHAR(255) default '',
-                token VARCHAR(50) NOT NULL,
+                token VARCHAR(100) NOT NULL,
                 isActive BOOLEAN NOT NULL,
                 UNIQUE KEY unique_scope_type (scopeName, scopeType, team)
             );
