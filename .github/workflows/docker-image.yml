@@ -31,4 +31,4 @@ jobs:
                 context: .
                 file: ./dockerfile
                 push: true
-                tags: ${{ secrets.DOCKER_USERNAME }}/$(echo ${{ github.repository }} | cut -d'/' -f2):latest
+                tags: ${{ secrets.DOCKER_USERNAME }}/copilot-metric-saver:latest
