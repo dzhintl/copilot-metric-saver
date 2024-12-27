@@ -103,8 +103,8 @@ export class MySQLSeatStorage implements ISeatStorage {
             // Check if the seat data is already in the database
             const checkResult: RowDataPacket | undefined = checkResults.find((row: RowDataPacket) => row.login === seat.login);
 
-            // Update the seat data if it is in the database and the last_activity_at with time is different
-            if (checkResult && new Date(checkResult.last_activity_at).toISOString() !== new Date(seat.last_activity_at).toISOString()) {
+            // Update the seat data if it is in the database and the last_activity_at without time is the same
+            if (checkResult && new Date(checkResult.last_activity_at).toDateString() === new Date(seat.last_activity_at).toDateString()) {
                 return [seat.assigning_team, seat.created_at, seat.last_activity_at, seat.last_activity_editor, refreshTime, seat.login, this.type, this.scope_name];
             }
         });
