@@ -12,6 +12,18 @@ import { Tenant } from '../model/Tenant';
 import { TenantServiceFactory } from './TenantServiceFactory';
 
 export class CopilotServiceFactory {
+  // Keep MySQLUsageStorage and FileUsageStorage in static hash map so that we don't have to keep creating new instances of these classes
+  static mysqlUsageStorages: { [key: string]: MySQLUsageStorage } = {};
+  static fileUsageStorages: { [key: string]: FileUsageStorage } = {};
+
+  // Keep MySQLSeatStorage and FileSeatStorage in static hash map so that we don't have to keep creating new instances of these classes
+  static mysqlSeatStorages: { [key: string]: MySQLSeatStorage } = {};
+  static fileSeatStorages: { [key: string]: FileSeatStorage } = {};
+
+  // Keep MySQLMetricsStorage and FileMetricsStorage in static hash map so that we don't have to keep creating new instances of these classes
+  static mysqlMetricsStorages: { [key: string]: MySQLMetricsStorage } = {};
+  static fileMetricsStorages: { [key: string]: FileMetricsStorage } = {};
+
   static async createUsageService(tenant: Tenant) {
     // if the tenant is not provided, get it from the storage
     if (!tenant) {
@@ -21,11 +33,19 @@ export class CopilotServiceFactory {
     let usageStorage;
     switch (storage_config.storage_type) {
       case 'mysql':
-        usageStorage = new MySQLUsageStorage(tenant);
+        // Check if the tenant is already in the hash map
+        if (!this.mysqlUsageStorages[tenant.id]) {
+          this.mysqlUsageStorages[tenant.id] = new MySQLUsageStorage(tenant);
+        }
+        usageStorage = this.mysqlUsageStorages[tenant.id];
         break;
       case 'file':
       default:
-        usageStorage = new FileUsageStorage(tenant);
+        // Check if the tenant is already in the hash map
+        if (!this.fileUsageStorages[tenant.id]) {
+          this.fileUsageStorages[tenant.id] = new FileUsageStorage(tenant);
+        }
+        usageStorage = this.fileUsageStorages[tenant.id];
         break;
     }
 
@@ -43,11 +63,19 @@ export class CopilotServiceFactory {
     let seatStorage;
     switch (storage_config.storage_type) {
       case 'mysql':
-        seatStorage = new MySQLSeatStorage(tenant);
+        // Check if the tenant is already in the hash map
+        if (!this.mysqlSeatStorages[tenant.id]) {
+          this.mysqlSeatStorages[tenant.id] = new MySQLSeatStorage(tenant);
+        }
+        seatStorage = this.mysqlSeatStorages[tenant.id];
         break;
       case 'file':
       default:
-        seatStorage = new FileSeatStorage(tenant);
+        // Check if the tenant is already in the hash map
+        if (!this.fileSeatStorages[tenant.id]) {
+          this.fileSeatStorages[tenant.id] = new FileSeatStorage(tenant);
+        }
+        seatStorage = this.fileSeatStorages[tenant.id];
         break;
     }
 
@@ -63,11 +91,19 @@ export class CopilotServiceFactory {
     let metricsStorage;
     switch (storage_config.storage_type) {
       case 'mysql':
-        metricsStorage = new MySQLMetricsStorage(tenant);
+        // Check if the tenant is already in the hash map
+        if (!this.mysqlMetricsStorages[tenant.id]) {
+          this.mysqlMetricsStorages[tenant.id] = new MySQLMetricsStorage(tenant);
+        }
+        metricsStorage = this.mysqlMetricsStorages[tenant.id];
         break;
       case 'file':
       default:
-        metricsStorage = new FileMetricsStorage(tenant);
+        // Check if the tenant is already in the hash map
+        if (!this.fileMetricsStorages[tenant.id]) {
+          this.fileMetricsStorages[tenant.id] = new FileMetricsStorage(tenant);
+        }
+        metricsStorage = this.fileMetricsStorages[tenant.id];
         break;
     }
 
