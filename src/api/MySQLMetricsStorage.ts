@@ -236,7 +236,7 @@ public async saveMetrics(metricsData: CopilotMetrics[], team_slug?: string): Pro
                   model.name,
                   model.is_custom_model,
                   model.custom_model_training_date,
-                  model.total_engaged_users,
+                  model.total_engaged_users || 0,
                 ]
               );
 

@@ -132,12 +132,20 @@ export class MySQLSeatStorage implements ISeatStorage {
     
         try {
             // Insert new rows
-            const [insertResult] = await this.dbConnection!.query<OkPacket>(insertQuery, [insertValues]);
-            console.log(`Inserted rows: ${insertResult.affectedRows}`);
+            if (insertValues.length !== 0) {
+                const [insertResult] = await this.dbConnection!.query<OkPacket>(insertQuery, [insertValues]);
+                console.log(`Inserted rows: ${insertResult.affectedRows} / ${insertValues.length}`);
+            }
 
             // Update existing rows
-            const [updateResult] = await this.dbConnection!.query<OkPacket>(updateQuery, [updateValues]);
-            console.log(`Updated rows: ${updateResult.affectedRows}`);
+            if (updateValues.length !== 0) {
+                let updatedRows = 0;
+                for (const updateValue of updateValues) {
+                    const [updateResult] = await this.dbConnection!.query<OkPacket>(updateQuery, updateValue);
+                    updatedRows += updateResult.affectedRows;
+                }
+                console.log(`Updated rows: ${updatedRows} / ${updateValues.length}`);
+            }
 
             return true;
         } catch (error) {
