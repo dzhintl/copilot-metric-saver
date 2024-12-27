@@ -97,7 +97,10 @@ export class MySQLSeatStorage implements ISeatStorage {
             if (!checkResult || new Date(checkResult.last_activity_at).toDateString() !== new Date(seat.last_activity_at).toDateString()) {
                 return [seat.login, seat.assigning_team, seat.created_at, seat.last_activity_at, seat.last_activity_editor, this.type, this.scope_name, refreshTime];
             }
-        });
+            else {
+                return null;
+            }
+        }).filter(value => value !== null);
 
         const updateValues = seatData.seats.map(seat => {
             // Check if the seat data is already in the database
@@ -107,7 +110,10 @@ export class MySQLSeatStorage implements ISeatStorage {
             if (checkResult && new Date(checkResult.last_activity_at).toDateString() === new Date(seat.last_activity_at).toDateString()) {
                 return [seat.assigning_team, seat.created_at, seat.last_activity_at, seat.last_activity_editor, refreshTime, seat.login, this.type, this.scope_name];
             }
-        });
+            else {
+                return null;
+            }
+        }).filter(value => value !== null);
     
         const insertQuery = `
             INSERT INTO CopilotSeats (login, team, created_at, last_activity_at, last_activity_editor, type, scope_name, refresh_time)
