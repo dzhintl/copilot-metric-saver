@@ -71,27 +71,68 @@ export class MySQLSeatStorage implements ISeatStorage {
         await this.ensureInitialized();
     
         const refreshTime = new Date(); // current time for batch refresh, it should be 
-    
+
+        // Query latest last_activity_at for each login, type, and scope_name.
         const query = `
+            SELECT 
+                login, 
+                type, 
+                scope_name, 
+                MAX(last_activity_at) AS last_activity_at 
+            FROM 
+                CopilotSeats 
+            WHERE 
+                type = ? AND scope_name = ? 
+            GROUP BY 
+                login, type, scope_name
+        `;
+
+        const [checkResults] = await this.dbConnection!.execute<RowDataPacket[]>(query, [this.type, this.scope_name]);
+
+        const insertValues = seatData.seats.map(seat => {
+            // Check if the seat data is already in the database
+            const checkResult: RowDataPacket | undefined = checkResults.find((row: RowDataPacket) => row.login === seat.login);
+
+            // Insert the seat data if it is not in the database or if the last_activity_at without time is different
+            if (!checkResult || new Date(checkResult.last_activity_at).toDateString() !== new Date(seat.last_activity_at).toDateString()) {
+                return [seat.login, seat.assigning_team, seat.created_at, seat.last_activity_at, seat.last_activity_editor, this.type, this.scope_name, refreshTime];
+            }
+        });
+
+        const updateValues = seatData.seats.map(seat => {
+            // Check if the seat data is already in the database
+            const checkResult: RowDataPacket | undefined = checkResults.find((row: RowDataPacket) => row.login === seat.login);
+
+            // Update the seat data if it is in the database and the last_activity_at with time is different
+            if (checkResult && new Date(checkResult.last_activity_at).toISOString() !== new Date(seat.last_activity_at).toISOString()) {
+                return [seat.assigning_team, seat.created_at, seat.last_activity_at, seat.last_activity_editor, refreshTime, seat.login, this.type, this.scope_name];
+            }
+        });
+    
+        const insertQuery = `
             INSERT INTO CopilotSeats (login, team, created_at, last_activity_at, last_activity_editor, type, scope_name, refresh_time)
             VALUES ?
         `;
-    
-        const values = seatData.seats.map(seat => [
-            seat.login,
-            seat.assigning_team,
-            seat.created_at,
-            seat.last_activity_at,
-            seat.last_activity_editor,
-            this.type,
-            this.scope_name,
-            refreshTime // same refresh time for each batch insert
-        ]);
+
+        const updateQuery = `
+            UPDATE CopilotSeats
+            SET team = ?,
+                created_at = ?,
+                last_activity_at = ?,
+                last_activity_editor = ?,
+                refresh_time = ?
+            WHERE login = ? AND type = ? AND scope_name = ?
+        `;
     
         try {
-           // console.log('Seat data received:', JSON.stringify(seatData, null, 2));
-            const [result] = await this.dbConnection!.query<OkPacket>(query, [values]);
-            console.log(`Inserted rows: ${result.affectedRows}`);
+            // Insert new rows
+            const [insertResult] = await this.dbConnection!.query<OkPacket>(insertQuery, [insertValues]);
+            console.log(`Inserted rows: ${insertResult.affectedRows}`);
+
+            // Update existing rows
+            const [updateResult] = await this.dbConnection!.query<OkPacket>(updateQuery, [updateValues]);
+            console.log(`Updated rows: ${updateResult.affectedRows}`);
+
             return true;
         } catch (error) {
             console.error('Error saving seat data:', error);
