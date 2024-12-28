@@ -4,20 +4,18 @@ import { ISeatStorage } from './ISeatStorage';
 import { Tenant } from '../model/Tenant';
 import { TotalSeats, Seat } from '../model/Seat';
 import { storage_config } from '../../config';
+import { MySQLAbstractStorage } from './MySQLAbstractStorage';
 
-export class MySQLSeatStorage implements ISeatStorage {
-    private dbConnection: Connection | null = null;
+export class MySQLSeatStorage extends MySQLAbstractStorage implements ISeatStorage {
     private scope_name: string = '';
     private type: string = '';
-    private initialized: boolean = false;
 
     constructor(tenant: Tenant) {
+        super();
         this.initializeScope(tenant);
-        this.initConnection();
-        this.initializeDatabase();
     }
 
-    private async initConnection() {
+    async initConnection() {
         try {
             this.dbConnection = await createConnection({
                 host: storage_config.DB?.HOST,
@@ -25,6 +23,7 @@ export class MySQLSeatStorage implements ISeatStorage {
                 password: storage_config.DB?.PASSWORD,
                 database: storage_config.DB?.DATABASE,
                 port: storage_config.DB?.PORT,
+                timezone: 'Z'
             });
             this.initialized = true;
             console.log('Database connection established successfully in seats module.');
@@ -39,7 +38,7 @@ export class MySQLSeatStorage implements ISeatStorage {
         this.type = tenant.scopeType;
     }
 
-    private async initializeDatabase() {
+    async initializeDatabase() {
         await this.ensureInitialized();
     
         const createSeatTableQuery = `
@@ -47,8 +46,8 @@ export class MySQLSeatStorage implements ISeatStorage {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 login VARCHAR(255) NOT NULL,
                 team VARCHAR(255),
-                created_at DATETIME NOT NULL,
-                last_activity_at DATETIME,
+                created_at TIMESTAMP NOT NULL,
+                last_activity_at TIMESTAMP NULL,
                 last_activity_editor VARCHAR(255),
                 type ENUM('organization', 'enterprise', 'team') NOT NULL,
                 scope_name VARCHAR(255) NOT NULL,
@@ -58,13 +57,6 @@ export class MySQLSeatStorage implements ISeatStorage {
     
         await this.dbConnection!.execute(createSeatTableQuery);
         console.log('Database tables initialized for seats module');
-    }
-
-    private async ensureInitialized() {
-        if (!this.initialized) {
-            console.log('Re-initializing connection in Seat modeule...');
-            await this.initConnection();
-        }
     }
 
     public async saveSeatData(seatData: TotalSeats): Promise<boolean> {
@@ -163,7 +155,8 @@ export class MySQLSeatStorage implements ISeatStorage {
                     team, 
                     created_at, 
                     last_activity_at, 
-                    last_activity_editor 
+                    last_activity_editor,
+                    refresh_time
                 FROM 
                     CopilotSeats 
                 WHERE 
@@ -189,7 +182,8 @@ export class MySQLSeatStorage implements ISeatStorage {
                 assigning_team: row.team,
                 created_at: row.created_at,
                 last_activity_at: row.last_activity_at,
-                last_activity_editor: row.last_activity_editor
+                last_activity_editor: row.last_activity_editor,
+                refresh_time: row.refresh_time
             }));
 
             return new TotalSeats(seats);

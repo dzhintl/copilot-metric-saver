@@ -5,6 +5,7 @@ export class Seat {
     created_at: string;
     last_activity_at: string;
     last_activity_editor: string;
+    refresh_time: string;
 
     constructor(data: any) {
         if (!data.assignee) {  // there is no assignee in the data. This is the case when the assignee is from the database. When it is from the database, it is a seat object
@@ -16,6 +17,7 @@ export class Seat {
             this.created_at = data.created_at;
             this.last_activity_at = data.last_activity_at;
             this.last_activity_editor = data.last_activity_editor;
+            this.refresh_time = data.refresh_time;
         }
         else { // the assignee is from the GitHub API. when it is there, it is an assignee object, and it does include many other fields
             this.login = data.assignee.login;
@@ -24,6 +26,7 @@ export class Seat {
             this.created_at = data.created_at;
             this.last_activity_at = data.last_activity_at;
             this.last_activity_editor = data.last_activity_editor;
+            this.refresh_time = new Date().toDateString();
         }
     }
 }

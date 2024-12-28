@@ -3,21 +3,19 @@ import { IUsageStorage } from './IUsageStorage';
 import { CopilotUsage, CopilotUsageBreakdown } from '../model/Copilot_Usage';
 import { storage_config } from '../../config';
 import { Tenant } from '../model/Tenant';
+import { MySQLAbstractStorage } from './MySQLAbstractStorage';
 
-export class MySQLUsageStorage implements IUsageStorage {
-    private dbConnection: Connection | null = null;
+export class MySQLUsageStorage extends MySQLAbstractStorage implements IUsageStorage {
     private scope_name: string = '';
     private type: string = '';
     private team?: string= '';
-    private initialized: boolean = false;
 
     constructor(tenant: Tenant) {
-        this.initConnection();
+        super();
         this.initializeScope(tenant);
-        this.initializeDatabase();
     }
 
-    private async initConnection() {
+    async initConnection() {
         try {
             this.dbConnection = await createConnection({
                 host: storage_config.DB?.HOST,
@@ -46,7 +44,7 @@ export class MySQLUsageStorage implements IUsageStorage {
         }
     }
 
-    private async initializeDatabase() {
+    async initializeDatabase() {
 
         await this.ensureInitialized();
         
@@ -90,13 +88,6 @@ export class MySQLUsageStorage implements IUsageStorage {
         await this.dbConnection!.execute(createCopilotUsageTableQuery);
         await this.dbConnection!.execute(createCopilotUsageBreakdownTableQuery);
         console.log('Database Usage tables initialized.');
-    }
-
-    private async ensureInitialized() {
-        if (!this.initialized) {
-            console.log('Re-initializing connection in Usage Module...');
-            await this.initConnection();
-        }
     }
 
     public async saveUsageData(CopilotUsage: CopilotUsage[],team_slug?:string): Promise<boolean> {

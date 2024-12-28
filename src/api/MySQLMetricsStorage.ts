@@ -20,21 +20,20 @@ import {
   CopilotDotcomPullRequestsRepository,
   CopilotDotcomPullRequestsRepositoryModel
 } from '../model/Copilot_Metrics';
+import { MySQLAbstractStorage } from './MySQLAbstractStorage';
 
-export class MySQLMetricsStorage implements IMetricsStorage {
-  private dbConnection: Connection | null = null;
+export class MySQLMetricsStorage extends MySQLAbstractStorage implements IMetricsStorage {
   private scope_name: string = '';
   private type: string = '';
   private team?: string = '';
-  private initialized: boolean = false;
+
 
   constructor(tenant: Tenant) {
-    this.initConnection();
+    super();
     this.initializeScope(tenant);
-    this.initializeDatabase();
   }
 
-  private async initConnection() {
+  async initConnection() {
     try {
       this.dbConnection = await createConnection({
         host: storage_config.DB?.HOST,
@@ -61,9 +60,7 @@ export class MySQLMetricsStorage implements IMetricsStorage {
     }
   }
 
-  
-  
-  private async initializeDatabase() {
+  async initializeDatabase() {
     await this.ensureInitialized();
     const sqlFilePath = join(__dirname, 'sql_file', 'mysql_copilot_metrics.sql');
     const sql = readFileSync(sqlFilePath, 'utf-8');
@@ -84,13 +81,6 @@ export class MySQLMetricsStorage implements IMetricsStorage {
       console.error('Error initializing database:', error);
     }
   }
-
-private async ensureInitialized() {
-  if (!this.initialized) {
-    console.log('Re-initializing connection in Metrics Module...');
-    await this.initConnection();
-  }
-}
 
 
 public async saveMetrics(metricsData: CopilotMetrics[], team_slug?: string): Promise<boolean> {
@@ -599,6 +589,75 @@ public async saveMetrics(metricsData: CopilotMetrics[], team_slug?: string): Pro
     }
 
     // Assemble copilot_ide_chat (similar logic)
+    const [chatRows] = await connection.execute<RowDataPacket[]>(
+      `
+      SELECT id, metrics_id, total_engaged_users
+      FROM copilot_ide_chat
+      WHERE metrics_id = ?
+      `,
+      [metricsId]
+    );
+
+    if (chatRows.length > 0) {
+      const chatRow = chatRows[0];
+      const ideChatId = chatRow.id;
+
+      const copilotIdeChat = new CopilotIdeChat({
+        total_engaged_users: chatRow.total_engaged_users,
+        editors: [],
+      });
+
+      // Get editors
+      const [editorRows] = await connection.execute<RowDataPacket[]>(
+        `
+        SELECT id, metrics_id, ide_chat_id, name, total_engaged_users
+        FROM copilot_ide_chat_editors
+        WHERE ide_chat_id = ?
+        `,
+        [ideChatId]
+      );
+
+      for (const editorRow of editorRows) {
+        const editorId = editorRow.id;
+
+        const editor = new CopilotIdeChatEditor({
+          name: editorRow.name,
+          total_engaged_users: editorRow.total_engaged_users,
+          models: [],
+        });
+
+        // Get models
+        const [modelRows] = await connection.execute<RowDataPacket[]>(
+          `
+          SELECT id, metrics_id, editor_id, name, is_custom_model, custom_model_training_date, total_engaged_users, total_chats, total_chat_insertion_events, total_chat_copy_events
+          FROM copilot_ide_chat_editor_models
+          WHERE editor_id = ?
+          `,
+          [editorId]
+        );
+
+        for (const modelRow of modelRows) {
+          const modelId = modelRow.id;
+
+          const model = new CopilotIdeChatEditorModel({
+            name: modelRow.name,
+            is_custom_model: modelRow.is_custom_model,
+            custom_model_training_date: modelRow.custom_model_training_date,
+            total_engaged_users: modelRow.total_engaged_users,
+            total_chats: modelRow.total_chats,
+            total_chat_insertion_events: modelRow.total_chat_insertion_events,
+            total_chat_copy_events: modelRow.total_chat_copy_events,
+          });
+
+          editor.models.push(model);
+        }
+
+        copilotIdeChat.editors.push(editor);
+      }
+
+      copilotMetrics.copilot_ide_chat = copilotIdeChat;
+    }
+
     // Assemble copilot_dotcom_chat (similar logic)
     // Assemble copilot_dotcom_pull_requests (similar logic)
 

@@ -3,19 +3,11 @@ import { createConnection, Connection, ResultSetHeader } from 'mysql2/promise';
 import { ITenantStorage } from './ITenantStorage';
 import { Tenant } from '../model/Tenant';
 import { storage_config } from '../../config';
+import { MySQLAbstractStorage } from './MySQLAbstractStorage';
 
-export class MySQLTenantStorage implements ITenantStorage {
-    private dbConnection: Connection | null = null;
-    private initialized: boolean = false;
-    private initPromise: Promise<void>;
+export class MySQLTenantStorage extends MySQLAbstractStorage implements ITenantStorage {
 
-    constructor() {
-        this.initPromise = this.initConnection().then(() => {
-            return this.initializeDatabase();
-        });
-    }
-
-    private async initConnection() {
+    async initConnection() {
         try {
             this.dbConnection = await createConnection({
                 host: storage_config.DB?.HOST,
@@ -32,7 +24,7 @@ export class MySQLTenantStorage implements ITenantStorage {
         }
     }
 
-    private async initializeDatabase() {
+    async initializeDatabase() {
         await this.ensureInitialized();
 
         const createTenantsTableQuery = `
@@ -52,13 +44,6 @@ export class MySQLTenantStorage implements ITenantStorage {
             console.log('Tenants table initialized.');
         } catch (error) {
             console.error('Error initializing tenants table:', error);
-        }
-    }
-
-    private async ensureInitialized() {
-        if (!this.initialized) {
-            console.log('Re-initializing connection in tenant module...');
-            await this.initPromise;
         }
     }
 
